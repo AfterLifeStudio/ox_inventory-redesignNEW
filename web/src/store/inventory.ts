@@ -1,4 +1,6 @@
-import { createSlice, current, isFulfilled, isPending, isRejected, PayloadAction } from '@reduxjs/toolkit';
+// store/inventory.ts
+
+import { createSlice, PayloadAction, current, isFulfilled, isPending, isRejected } from '@reduxjs/toolkit';
 import type { RootState } from '.';
 import { Slot, State } from '../typings';
 import {
@@ -8,6 +10,16 @@ import {
   swapSlotsReducer,
   moveSlotsReducer,
 } from '../reducers';
+
+// Funkce pro nalezení první neobsazené pozice v poli slotů
+function findFirstEmptySlot(items: Slot[]): number {
+  for (let i = 0; i < items.length; i++) {
+    if (!items[i]) {
+      return i;
+    }
+  }
+  return -1; // Vrací -1, pokud není žádná neobsazená pozice
+}
 
 const initialState: State = {
   leftInventory: {
@@ -62,6 +74,21 @@ export const inventorySlice = createSlice({
 
       container.weight = action.payload;
     },
+    addItem: (state, action: PayloadAction<{ item: Slot; inventoryType: 'left' | 'right' }>) => {
+      const { item, inventoryType } = action.payload;
+      const inventory = inventoryType === 'left' ? state.leftInventory : state.rightInventory;
+
+      // Najít první volnou pozici
+      const emptySlotIndex = findFirstEmptySlot(inventory.items);
+
+      if (emptySlotIndex !== -1) {
+        // Pokud je nalezena neobsazená pozice, vložit předmět na tuto pozici
+        inventory.items[emptySlotIndex] = item;
+      } else {
+        // Pokud není nalezena neobsazená pozice, přidat předmět na konec
+        inventory.items.push(item);
+      }
+    },
   },
   extraReducers: (builder) => {
     builder.addMatcher(isPending, (state) => {
@@ -96,7 +123,9 @@ export const {
   stackSlots,
   refreshSlots,
   setContainerWeight,
+  addItem, // Export akce pro přidání předmětu
 } = inventorySlice.actions;
+
 export const selectLeftInventory = (state: RootState) => state.inventory.leftInventory;
 export const selectRightInventory = (state: RootState) => state.inventory.rightInventory;
 export const selectItemAmount = (state: RootState) => state.inventory.itemAmount;
